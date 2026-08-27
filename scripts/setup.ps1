@@ -24,8 +24,23 @@ if ($code -ne '401') {
 
 $found = $false
 
+# 2.5) Codex CLI 缺失时自动安装（同事此前只用过 GPT 客户端的常见场景）
+$hasCodex = [bool](Get-Command codex -ErrorAction SilentlyContinue)
+$hasClaude = [bool](Get-Command claude -ErrorAction SilentlyContinue)
+if (-not $hasCodex -and -not $hasClaude) {
+    if (Get-Command npm -ErrorAction SilentlyContinue) {
+        Write-Host "未检测到 Codex CLI，正在通过 npm 安装（约 1 分钟）……"
+        npm install -g @openai/codex
+        Write-Host "[OK] Codex CLI 已装好。接入完成后运行一次 codex login，在浏览器里用你的 ChatGPT 账号登录（订阅额度直接用）" -ForegroundColor Green
+        $hasCodex = $true
+    } else {
+        Write-Host "[提示] 本机没有 Node.js，无法自动装 Codex CLI。先运行：winget install -e --id OpenJS.NodeJS.LTS，重开终端后再跑本脚本。" -ForegroundColor Yellow
+    }
+}
+
 # 3) Codex
 $codexDir = Join-Path $HOME '.codex'
+if ($hasCodex -and -not (Test-Path $codexDir)) { New-Item -ItemType Directory -Force $codexDir | Out-Null }
 if (Test-Path $codexDir) {
     $found = $true
     $cfg = Join-Path $codexDir 'config.toml'
